@@ -1,7 +1,10 @@
-import 'dart:ui';
-
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
+enum TodoStatus {
+  todo,
+  done,
+  removed,
+}
 
 void main() {
   runApp(const MaterialApp(home: MyTodoApp()));
@@ -15,28 +18,74 @@ class MyTodoApp extends StatefulWidget {
 }
 
 class _MyTodoAppState extends State<MyTodoApp> {
-  List<String> todos = ["Test", "Test2", "Test3"];
+  List<Todo> todos = [
+    Todo(
+        name: "Plant a vegetable garden",
+        description: "Plant tomatoes, carrots, and lettuce in the backyard",
+        status: TodoStatus.todo),
+    Todo(
+        name: "Fix the leaky faucet",
+        description:
+            "Replace the washer and check the faucet for any other issues",
+        status: TodoStatus.todo),
+    Todo(
+        name: "Organize the garage",
+        description:
+            "Sort tools, dispose of unused items, and set up new storage shelves",
+        status: TodoStatus.todo),
+    Todo(
+        name: "Clean the gutters",
+        description: "Remove debris from the gutters and check for any damage",
+        status: TodoStatus.todo),
+    Todo(
+        name: "Install new light fixtures",
+        description:
+            "Replace old fixtures with modern ones in the living room, kitchen, and bedroom",
+        status: TodoStatus.todo),
+  ];
 
-  List<int> markedItemIndex = [];
+  List<Todo> markedTodos = [
+    Todo(
+        name: "Plant a vegetable garden",
+        description: "Plant tomatoes, carrots, and lettuce in the backyard",
+        status: TodoStatus.done) // faire barré la Todo
+  ];
 
-  // void _removeItem(int index) {
-  //   setState(() {
-  //     todos.removeAt(index);
-  //   });
-  // }
-
-  void _toggleItemMark(int index) {
+  void _removeItem(Todo todo) {
     setState(() {
-      markedItemIndex.contains(index)
-          ? markedItemIndex.remove(index)
-          : markedItemIndex.add(index);
+      todos.remove(todo);
     });
-    print(markedItemIndex);
   }
 
-  void _addItem(String text) {
+  void _toggleItemMark(Todo todo) {
     setState(() {
-      todos.add(text);
+      markedTodos.contains(todo);
+    });
+    print(markedTodos.contains(todo));
+  }
+
+  void _onShowTodoDetail(Todo todo) async {
+    final action = await Navigator.push(context,
+        MaterialPageRoute(builder: (context) => TodoDetailScreen(todo: todo)));
+
+    setState(() {
+      switch (action) {
+        case TodoStatus.todo:
+          _toggleItemMark(todo);
+          break;
+        case TodoStatus.done:
+          _toggleItemMark(todo);
+          break;
+        case TodoStatus.removed:
+          _removeItem(todo);
+          break;
+      }
+    });
+  }
+
+  void _addItem(Todo todo) {
+    setState(() {
+      todos.add(todo);
     });
   }
 
@@ -44,13 +93,27 @@ class _MyTodoAppState extends State<MyTodoApp> {
     showDialog(
         context: context,
         builder: (context) {
-          TextEditingController controller = TextEditingController();
+          TextEditingController titleController = TextEditingController();
+          TextEditingController descriptionController = TextEditingController();
 
           return AlertDialog(
             title: const Text("Enter some text!"),
-            content: TextField(
-              controller: controller,
-              decoration: const InputDecoration(hintText: 'Enter Some text'),
+            content: SizedBox(
+              width: 350,
+              height: 200,
+              child: Column(children: [
+                const SizedBox(height: 40),
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(hintText: "Enter a title"),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: descriptionController,
+                  decoration:
+                      const InputDecoration(hintText: "Enter a description"),
+                )
+              ]),
             ),
             actions: <Widget>[
               TextButton(
@@ -61,7 +124,10 @@ class _MyTodoAppState extends State<MyTodoApp> {
               TextButton(
                   onPressed: () {
                     setState(() {
-                      _addItem(controller.text);
+                      _addItem(Todo(
+                          name: titleController.text,
+                          description: descriptionController.text,
+                          status: TodoStatus.todo));
                     });
                     Navigator.of(context).pop();
                   },
@@ -74,33 +140,144 @@ class _MyTodoAppState extends State<MyTodoApp> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            "MyTodoApp",
-            style: TextStyle(color: Colors.white, fontSize: 40),
-          ),
-          backgroundColor: Colors.blueAccent,
+      appBar: AppBar(
+        title: const Text(
+          "MyTodoApp",
+          style: TextStyle(color: Colors.white, fontSize: 40),
         ),
-        body: ListView.builder(
-          itemCount: todos.length,
-          itemBuilder: (context, index) {
-            return ListTile(
-              title: Text(todos[index],
-                  style: TextStyle(
-                      fontSize: 24,
-                      color: Colors.red,
-                  decoration: markedItemIndex.contains(index) ? TextDecoration.lineThrough : TextDecoration.none)),
-              onTap: () => {_toggleItemMark(index)},
-            );
-          },
+        backgroundColor: Colors.blueAccent,
+      ),
+      body: ListView.builder(
+        itemCount: todos.length,
+        itemBuilder: (context, index) {
+          return ListTile(
+            title: Text(
+              todos[index].name,
+              style: TextStyle(
+                  fontSize: 24,
+                  color: Colors.black,
+                  decoration: todos[index].status == TodoStatus.done
+                      ? TextDecoration.lineThrough
+                      : TextDecoration.none),
+            ),
+            onTap: () {
+              _onShowTodoDetail(todos[index]);
+            },
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showInputDialog,
+        backgroundColor: Colors.black,
+        child: const Icon(
+          Icons.add,
+          color: Colors.red,
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _showInputDialog,
-          backgroundColor: Colors.black,
-          child: const Icon(
-            Icons.add,
-            color: Colors.red,
-          ),
-        ));
+      ),
+    );
+  }
+}
+
+class TodoDetailScreen extends StatelessWidget {
+  final Todo todo;
+
+  const TodoDetailScreen({super.key, required this.todo});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(todo.name),
+        backgroundColor: Colors.green,
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 300,
+                  child: Text(
+                    todo.description,
+                    style: const TextStyle(
+                        color: Colors.blue,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500),
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Container(
+                  padding: const EdgeInsets.all(8.0),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.blue, width: 0),
+                    color: Colors.purple,
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  child: Text(
+                    todo.status == TodoStatus.todo
+                        ? "No completed"
+                        : "Completed",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                )
+              ],
+            ),
+            const SizedBox(height: 30),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context, TodoStatus.done);
+                    },
+                    child:
+                        Text(todo.status == TodoStatus.todo ? "Done" : "Undo")),
+                const SizedBox(width: 15),
+                ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context, TodoStatus.removed);
+                    },
+                    child: const Text("Remove"))
+              ],
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class Todo {
+  String name;
+
+  String description;
+
+  TodoStatus status;
+
+  Todo({required this.name, required this.description, required this.status});
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is Todo &&
+        other.name == name &&
+        other.description == description &&
+        other.status == status;
+  }
+
+  @override
+  int get hashCode => name.hashCode ^ description.hashCode ^ status.hashCode;
+
+  @override
+  String toString() {
+    return 'Todo{name: $name, description: $description, status: $status}';
   }
 }
