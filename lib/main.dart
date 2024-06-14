@@ -44,24 +44,21 @@ class _MyTodoAppState extends State<MyTodoApp> {
         status: TodoStatus.todo),
   ];
 
-  List<Todo> markedTodos = [
-    Todo(
-        name: "Plant a vegetable garden",
-        description: "Plant tomatoes, carrots, and lettuce in the backyard",
-        status: TodoStatus.done) // faire barré la Todo
-  ];
-
   void _removeItem(Todo todo) {
     setState(() {
       todos.remove(todo);
     });
   }
 
-  void _toggleItemMark(Todo todo) {
+  void _toggleItemMark(TodoStatus status, int hashCode) {
     setState(() {
-      markedTodos.contains(todo);
+      todos = todos.map((t) {
+        if (t.hashCode == hashCode) {
+          t.status = status;
+        }
+        return t;
+      }).toList();
     });
-    print(markedTodos.contains(todo));
   }
 
   void _onShowTodoDetail(Todo todo) async {
@@ -71,10 +68,10 @@ class _MyTodoAppState extends State<MyTodoApp> {
     setState(() {
       switch (action) {
         case TodoStatus.todo:
-          _toggleItemMark(todo);
+          _toggleItemMark(action, todo.hashCode);
           break;
         case TodoStatus.done:
-          _toggleItemMark(todo);
+          _toggleItemMark(action, todo.hashCode);
           break;
         case TodoStatus.removed:
           _removeItem(todo);
@@ -124,12 +121,15 @@ class _MyTodoAppState extends State<MyTodoApp> {
               TextButton(
                   onPressed: () {
                     setState(() {
-                      _addItem(Todo(
-                          name: titleController.text,
-                          description: descriptionController.text,
-                          status: TodoStatus.todo));
+                      if (titleController.text.isNotEmpty &&
+                          descriptionController.text.isNotEmpty) {
+                        _addItem(Todo(
+                            name: titleController.text,
+                            description: descriptionController.text,
+                            status: TodoStatus.todo));
+                        Navigator.of(context).pop();
+                      }
                     });
-                    Navigator.of(context).pop();
                   },
                   child: const Text("Save"))
             ],
@@ -235,7 +235,9 @@ class TodoDetailScreen extends StatelessWidget {
               children: [
                 ElevatedButton(
                     onPressed: () {
-                      Navigator.pop(context, TodoStatus.done);
+                      todo.status == TodoStatus.todo
+                          ? Navigator.pop(context, TodoStatus.done)
+                          : Navigator.pop(context, TodoStatus.todo);
                     },
                     child:
                         Text(todo.status == TodoStatus.todo ? "Done" : "Undo")),
@@ -263,6 +265,18 @@ class Todo {
 
   Todo({required this.name, required this.description, required this.status});
 
+  set setName(String name) {
+    this.name = name;
+  }
+
+  set setDescription(String description) {
+    description = description;
+  }
+
+  set setStatus(TodoStatus status) {
+    status = status;
+  }
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -278,6 +292,6 @@ class Todo {
 
   @override
   String toString() {
-    return 'Todo{name: $name, description: $description, status: $status}';
+    return 'Todo{_name: $name, _description: $description, _status: $status}';
   }
 }
